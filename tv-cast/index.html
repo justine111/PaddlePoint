@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🏓 Pickleball Live Score</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: #050505;
+        color: #fff;
+        font-family:
+          "SF Pro Display",
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── Top bar ──────────────────────────────── */
+      #topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 32px;
+        border-bottom: 1px solid #111;
+        background: #080808;
+        flex-shrink: 0;
+      }
+      #logo {
+        font-size: 20px;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.5px;
+      }
+      #logo span {
+        color: #4fc3f7;
+      }
+      #live-badge {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: #1a3a1a;
+        border-radius: 20px;
+        padding: 5px 14px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #4caf50;
+      }
+      #live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4caf50;
+        animation: pulse 1.2s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.4;
+          transform: scale(0.7);
+        }
+      }
+      #set-info {
+        color: #555;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      /* ── Main score panel ─────────────────────── */
+      #main {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        padding: 24px 40px;
+      }
+
+      .team-block {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .serve-indicator {
+        height: 18px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #ffd54f;
+        letter-spacing: 0.5px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .serve-indicator.active {
+        opacity: 1;
+      }
+      .serve-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #ffd54f;
+        animation: pulse 1s infinite;
+      }
+
+      .team-name {
+        font-size: clamp(22px, 3.5vw, 42px);
+        font-weight: 900;
+        letter-spacing: -0.5px;
+        text-align: center;
+      }
+      .team-a .team-name {
+        color: #4fc3f7;
+      }
+      .team-b .team-name {
+        color: #ff7043;
+      }
+
+      .player-names {
+        font-size: clamp(12px, 1.5vw, 18px);
+        color: #444;
+        text-align: center;
+      }
+
+      .score-number {
+        font-size: clamp(80px, 18vw, 220px);
+        font-weight: 900;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        transition:
+          transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1.4),
+          color 0.2s;
+      }
+      .team-a .score-number {
+        color: #4fc3f7;
+      }
+      .team-b .score-number {
+        color: #ff7043;
+      }
+      .score-number.scored {
+        transform: scale(1.12);
+      }
+
+      /* ── Center divider ───────────────────────── */
+      .center-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 0 24px;
+        flex-shrink: 0;
+      }
+      .colon {
+        font-size: clamp(40px, 8vw, 100px);
+        color: #1a1a1a;
+        font-weight: 200;
+        line-height: 1;
+      }
+      .sets-display {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: clamp(14px, 2vw, 22px);
+        color: #555;
+        font-weight: 700;
+      }
+      .sets-a {
+        color: #4fc3f7;
+      }
+      .sets-b {
+        color: #ff7043;
+      }
+
+      /* ── Bottom bar ───────────────────────────── */
+      #bottombar {
+        padding: 12px 32px;
+        border-top: 1px solid #111;
+        background: #080808;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+        gap: 12px;
+      }
+      #history-strip {
+        display: flex;
+        gap: 14px;
+        overflow: hidden;
+        flex: 1;
+      }
+      .hist-chip {
+        font-size: 13px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+      }
+      #points-info {
+        color: #333;
+        font-size: 13px;
+        font-weight: 500;
+        flex-shrink: 0;
+      }
+
+      /* ── Animations ───────────────────────────── */
+      @keyframes flash {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+      .set-win-flash {
+        animation: flash 0.5s 3;
+      }
+
+      /* ── Loading / Error ──────────────────────── */
+      #overlay {
+        position: fixed;
+        inset: 0;
+        background: #050505;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        z-index: 99;
+        transition: opacity 0.4s;
+      }
+      #overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #overlay-emoji {
+        font-size: 56px;
+      }
+      #overlay-text {
+        color: #555;
+        font-size: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading overlay -->
+    <div id="overlay">
+      <div id="overlay-emoji">🏓</div>
+      <div id="overlay-text">Connecting to match…</div>
+    </div>
+
+    <!-- Top bar -->
+    <div id="topbar">
+      <div id="logo">Pickle<span>Ball</span></div>
+      <div id="live-badge">
+        <div id="live-dot"></div>
+        LIVE
+      </div>
+      <div id="set-info">
+        Set <span id="set-num">1</span> &nbsp;·&nbsp; Sets:
+        <span id="sets-a-top" style="color: #4fc3f7">0</span>–<span
+          id="sets-b-top"
+          style="color: #ff7043"
+          >0</span
+        >
+      </div>
+    </div>
+
+    <!-- Main score -->
+    <div id="main">
+      <div class="team-block team-a">
+        <div class="serve-indicator" id="serve-a">
+          <div class="serve-dot"></div>
+          SERVING
+        </div>
+        <div class="team-name" id="name-a">Team A</div>
+        <div class="player-names" id="players-a"></div>
+        <div class="score-number" id="score-a">0</div>
+      </div>
+
+      <div class="center-col">
+        <div class="colon">:</div>
+        <div class="sets-display">
+          <span class="sets-a" id="sets-a">0</span>
+          <span style="color: #222">–</span>
+          <span class="sets-b" id="sets-b">0</span>
+        </div>
+      </div>
+
+      <div class="team-block team-b">
+        <div class="serve-indicator" id="serve-b">
+          <div class="serve-dot"></div>
+          SERVING
+        </div>
+        <div class="team-name" id="name-b">Team B</div>
+        <div class="player-names" id="players-b"></div>
+        <div class="score-number" id="score-b">0</div>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div id="bottombar">
+      <div id="history-strip"></div>
+      <div id="points-info">First to <span id="pts-to-win">11</span> pts</div>
+    </div>
+
+    <!-- Firebase JS SDK -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+      import {
+        getFirestore,
+        doc,
+        onSnapshot,
+      } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+      // ── Replace with your Firebase config ──────────────────────────────────────
+      const firebaseConfig = {
+        apiKey: "AIzaSyAwp1YZvDz0wNrPOj-mQGx1rsfKYFw7bdQ",
+        authDomain: "paddlepoint-ff045.firebaseapp.com",
+        projectId: "paddlepoint-ff045",
+        storageBucket: "paddlepoint-ff045.appspot.com",
+        messagingSenderId: "488864877077",
+        appId: "1:488864877077:android:70a47ed88480675fee1c1c",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      // ── Get matchId from URL path: /cast/<matchId> ────────────────────────────
+      const matchId = location.pathname.split("/").at(-1);
+      if (!matchId) {
+        document.getElementById("overlay-text").textContent =
+          "No match ID in URL.";
+        throw new Error("No matchId");
+      }
+
+      // ── DOM refs ──────────────────────────────────────────────────────────────
+      const $ = (id) => document.getElementById(id);
+      let prevScoreA = 0,
+        prevScoreB = 0;
+
+      function animateScore(el, newVal, oldVal) {
+        if (newVal !== oldVal) {
+          el.classList.add("scored");
+          setTimeout(() => el.classList.remove("scored"), 300);
+        }
+        el.textContent = newVal;
+      }
+
+      // ── Firestore listener ────────────────────────────────────────────────────
+      onSnapshot(doc(db, "matches", matchId), (snap) => {
+        if (!snap.exists()) {
+          $("overlay-text").textContent = "Match not found.";
+          return;
+        }
+
+        // Hide loading overlay
+        $("overlay").classList.add("hidden");
+
+        const m = snap.data();
+        const {
+          teamA,
+          teamB,
+          servingTeam,
+          sets = {},
+          set = 1,
+          pointsToWin = 11,
+          scoreHistory = [],
+          type,
+        } = m;
+
+        // Names
+        $("name-a").textContent = teamA?.name ?? "Team A";
+        $("name-b").textContent = teamB?.name ?? "Team B";
+        $("players-a").textContent =
+          type === "doubles" ? (teamA?.players?.join(" · ") ?? "") : "";
+        $("players-b").textContent =
+          type === "doubles" ? (teamB?.players?.join(" · ") ?? "") : "";
+
+        // Scores with animation
+        animateScore($("score-a"), teamA?.score ?? 0, prevScoreA);
+        animateScore($("score-b"), teamB?.score ?? 0, prevScoreB);
+        prevScoreA = teamA?.score ?? 0;
+        prevScoreB = teamB?.score ?? 0;
+
+        // Sets
+        $("sets-a").textContent = sets.A ?? 0;
+        $("sets-b").textContent = sets.B ?? 0;
+        $("sets-a-top").textContent = sets.A ?? 0;
+        $("sets-b-top").textContent = sets.B ?? 0;
+        $("set-num").textContent = set;
+        $("pts-to-win").textContent = pointsToWin;
+
+        // Serve indicator
+        $("serve-a").classList.toggle("active", servingTeam === "A");
+        $("serve-b").classList.toggle("active", servingTeam === "B");
+
+        // History strip (last 8 points)
+        const strip = $("history-strip");
+        strip.innerHTML = "";
+        scoreHistory
+          .slice(-8)
+          .reverse()
+          .forEach((h) => {
+            const chip = document.createElement("span");
+            chip.className = "hist-chip";
+            chip.style.color = h.scoringTeam === "A" ? "#4fc3f7" : "#ff7043";
+            chip.textContent = `${h.scoreA}–${h.scoreB}`;
+            strip.appendChild(chip);
+          });
+
+        // Match complete state
+        if (m.status === "completed") {
+          $("live-badge").innerHTML = "✅ Match Over";
+          $("live-badge").style.background = "#1a1a1a";
+          $("live-badge").style.color = "#888";
+          $("live-dot").style.display = "none";
+        }
+      });
+    </script>
+  </body>
+</html>
